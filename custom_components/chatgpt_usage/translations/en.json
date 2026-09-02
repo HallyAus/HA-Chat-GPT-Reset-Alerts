@@ -1,0 +1,79 @@
+{
+  "title": "ChatGPT Usage",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose connection method",
+        "description": "Remote OpenAI works without your PC. Local Codex reads usage through the Windows helper.",
+        "data": {"provider": "Connection method"}
+      },
+      "remote": {
+        "title": "Start OpenAI sign-in",
+        "description": "Continue to generate a device code."
+      },
+      "device": {
+        "title": "Connect OpenAI account",
+        "description": "Open {verification_url} and enter code **{user_code}**. After approving access, return here and confirm.",
+        "data": {"confirm": "I completed OpenAI sign-in"}
+      },
+      "workspace": {
+        "title": "Choose ChatGPT workspace",
+        "description": "Select the workspace whose Codex usage Home Assistant should monitor.",
+        "data": {"account_id": "Workspace"}
+      },
+      "local": {
+        "title": "Connect local Codex helper",
+        "description": "Enter the values printed by local_helper_codex/install.ps1.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "use_https": "Use HTTPS"
+        }
+      },
+      "reauth_local": {
+        "title": "Reconnect local Codex helper",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "use_https": "Use HTTPS"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the usage service.",
+      "invalid_auth": "Authentication was rejected.",
+      "authorization_pending": "OpenAI sign-in is not complete yet. Approve the device code, then try again.",
+      "device_auth_disabled": "Device-code login is disabled for this account or workspace.",
+      "invalid_response": "The service returned an unsupported response.",
+      "unknown": "An unexpected OpenAI error occurred."
+    },
+    "abort": {
+      "already_configured": "This ChatGPT usage source is already configured.",
+      "invalid_auth": "OpenAI authentication failed.",
+      "cannot_connect": "Unable to connect to OpenAI.",
+      "unknown": "OpenAI returned an unexpected response.",
+      "device_flow_expired": "The device login expired. Start setup again.",
+      "reauth_successful": "Authentication updated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "ChatGPT Usage options",
+        "data": {
+          "update_interval": "Polling interval (seconds)",
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "use_https": "Use HTTPS"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the local helper.",
+      "invalid_auth": "The local helper rejected the API key."
+    }
+  }
+}

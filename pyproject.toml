@@ -1,5 +1,5 @@
 [project]
-name = "ha-claude-usage"
+name = "ha-ai-usage"
 version = "0.1.0"
 requires-python = ">=3.13"
 

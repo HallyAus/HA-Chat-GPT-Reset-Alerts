@@ -1,0 +1,12 @@
+{
+  "domain": "chatgpt_usage",
+  "name": "ChatGPT Usage",
+  "codeowners": ["@HallyAus"],
+  "config_flow": true,
+  "documentation": "https://github.com/HallyAus/HA_Ai_Usage",
+  "integration_type": "service",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/HallyAus/HA_Ai_Usage/issues",
+  "requirements": [],
+  "version": "0.1.0"
+}

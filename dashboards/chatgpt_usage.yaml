@@ -1,0 +1,20 @@
+type: entities
+title: ChatGPT / Codex Usage
+show_header_toggle: false
+entities:
+  - entity: sensor.chatgpt_usage_5_hour_usage
+    name: 5 hour usage
+  - entity: sensor.chatgpt_usage_5_hour_remaining
+    name: 5 hour remaining
+  - entity: sensor.chatgpt_usage_5_hour_reset
+    name: 5 hour reset
+  - entity: sensor.chatgpt_usage_weekly_usage
+    name: Weekly usage
+  - entity: sensor.chatgpt_usage_weekly_remaining
+    name: Weekly remaining
+  - entity: sensor.chatgpt_usage_weekly_reset
+    name: Weekly reset
+  - entity: sensor.chatgpt_usage_last_successful_update
+    name: Last update
+  - entity: binary_sensor.chatgpt_usage_connected
+    name: Connected

@@ -29,9 +29,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: home-assistant/actions/hassfest@master
 
-  hacs:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: hacs/action@main
-        with:
-          category: integration
+# HACS validation is intentionally omitted because this private repository
+# contains two separate custom integrations. HACS distribution should split
+# them into separate repositories or combine them into one integration first.
