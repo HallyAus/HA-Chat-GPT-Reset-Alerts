@@ -1,6 +1,11 @@
 import pytest
 
-from custom_components.chatgpt_usage.parsing import UsageSchemaError, parse_helper_usage, parse_openai_usage
+from custom_components.chatgpt_usage.parsing import (
+    UsageSchemaError,
+    parse_app_server_rate_limits,
+    parse_helper_usage,
+    parse_openai_usage,
+)
 
 
 def _window(used, reset, seconds):
@@ -66,7 +71,7 @@ def test_credits_and_reset_credits_are_read_only_metadata():
     assert data.available_reset_credits == 2
 
 
-def test_helper_requires_version_and_usage_object():
+def test_helper_supports_legacy_sanitized_usage_payload():
     payload = {
         "api_version": 1,
         "account_id": "acct",
@@ -79,6 +84,68 @@ def test_helper_requires_version_and_usage_object():
     assert data.source == "local"
     assert data.plan == "pro"
     assert data.account_id == "acct"
+
+
+def test_parses_official_codex_app_server_rate_limits():
+    result = {
+        "rateLimits": {
+            "limitId": "codex",
+            "limitName": None,
+            "primary": {
+                "usedPercent": 12,
+                "windowDurationMins": 300,
+                "resetsAt": 1_800_000_000,
+            },
+            "secondary": {
+                "usedPercent": 44,
+                "windowDurationMins": 10080,
+                "resetsAt": 1_800_100_000,
+            },
+            "credits": {"hasCredits": True, "unlimited": False, "balance": "12.5"},
+            "planType": "pro",
+            "rateLimitReachedType": None,
+        },
+        "rateLimitsByLimitId": None,
+        "rateLimitResetCredits": {"availableCount": 2, "credits": None},
+        "accountId": "acct-app-server",
+    }
+    data = parse_app_server_rate_limits(result)
+    assert data.source == "local"
+    assert data.plan == "pro"
+    assert data.account_id == "acct-app-server"
+    assert data.window("five_hour").used_percent == 12
+    assert data.window("weekly").used_percent == 44
+    assert data.window("weekly").remaining_percent == 56
+    assert data.credits.has_credits is True
+    assert data.credits.balance == 12.5
+    assert data.available_reset_credits == 2
+
+
+def test_helper_parses_app_server_envelope():
+    payload = {
+        "api_version": 1,
+        "plan": "pro",
+        "app_server_result": {
+            "rateLimits": {
+                "limitId": "codex",
+                "limitName": None,
+                "primary": {
+                    "usedPercent": 7,
+                    "windowDurationMins": 300,
+                    "resetsAt": 1_800_000_000,
+                },
+                "secondary": None,
+                "credits": None,
+                "planType": "pro",
+                "rateLimitReachedType": None,
+            },
+            "rateLimitsByLimitId": None,
+            "rateLimitResetCredits": None,
+        },
+    }
+    data = parse_helper_usage(payload)
+    assert data.source == "local"
+    assert data.window("five_hour").remaining_percent == 93
 
 
 def test_missing_windows_raises_instead_of_faking_zero():
