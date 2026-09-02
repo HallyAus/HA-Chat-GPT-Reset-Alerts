@@ -1,34 +1,34 @@
 # AI Usage for Home Assistant
 
-A private Home Assistant integration repository for monitoring subscription usage and reset times for:
+A private Home Assistant repository for monitoring subscription usage and reset times for:
 
-- **Claude / Claude Code**
 - **ChatGPT / Codex**
+- **Claude / Claude Code**
 
-Both integrations are read-only. Their primary purpose is to let Home Assistant notify you when an AI allowance resets.
+The primary purpose is simple: **notify Home Assistant when an AI usage allowance resets**.
 
-> **Unofficial community project.** This repository is not affiliated with, endorsed by, or supported by Anthropic or OpenAI.
+Both integrations default to **one poll per hour** and support persistent reset detection so a Home Assistant restart does not generate a false reset event.
+
+> **Unofficial community project.** This repository is not affiliated with, endorsed by, or supported by OpenAI or Anthropic.
 
 ---
 
-## What is included
+## Included integrations
 
-| Integration | Home Assistant domain | Remote mode | Local mode | Reset event |
+| Integration | HA domain | Recommended mode | Local mode | Reset event |
 |---|---|---|---|---|
-| Claude Usage | `claude_usage` | Anthropic OAuth | Claude Code Windows helper | `claude_usage_reset` |
-| ChatGPT Usage | `chatgpt_usage` | OpenAI device login | Codex Windows helper | `chatgpt_usage_reset` |
+| ChatGPT Usage | `chatgpt_usage` | Remote OpenAI device login | Official Codex app-server helper | `chatgpt_usage_reset` |
+| Claude Usage | `claude_usage` | Remote Anthropic OAuth | Claude Code helper | `claude_usage_reset` |
 
-Both default to **one poll per hour**.
-
-The repo also contains Windows helpers and basic Lovelace examples.
+You can install either integration or both.
 
 ---
 
-# Installation while this repository is private
+# Installation
 
-HACS does not normally install private GitHub custom repositories. While `HallyAus/HA_Ai_Usage` remains private, install the integrations manually.
+## This repository is private
 
-This repository also contains **two** Home Assistant integrations. HACS distribution is designed around one integration per repository, so if this project is later made public for HACS, split Claude and ChatGPT into separate repositories or merge them into one combined `ai_usage` integration first.
+While `HallyAus/HA_Ai_Usage` remains private, install the custom components manually.
 
 Clone or download:
 
@@ -36,19 +36,7 @@ Clone or download:
 https://github.com/HallyAus/HA_Ai_Usage
 ```
 
-For Claude, copy:
-
-```text
-custom_components/claude_usage
-```
-
-to:
-
-```text
-/config/custom_components/claude_usage
-```
-
-For ChatGPT/Codex, copy:
+Copy ChatGPT/Codex:
 
 ```text
 custom_components/chatgpt_usage
@@ -60,27 +48,48 @@ to:
 /config/custom_components/chatgpt_usage
 ```
 
-You can install either integration or both.
+Copy Claude:
 
-Then restart Home Assistant:
+```text
+custom_components/claude_usage
+```
+
+to:
+
+```text
+/config/custom_components/claude_usage
+```
+
+Do **not** copy the whole repository into `/config/custom_components`.
+
+Your Home Assistant filesystem should contain paths such as:
+
+```text
+/config/custom_components/chatgpt_usage/manifest.json
+/config/custom_components/chatgpt_usage/config_flow.py
+/config/custom_components/claude_usage/manifest.json
+/config/custom_components/claude_usage/config_flow.py
+```
+
+Then perform a full Home Assistant restart:
 
 **Settings → System → Restart Home Assistant**
 
-After restart, go to:
+After restart:
 
 **Settings → Devices & services → Add Integration**
 
-and search for **Claude Usage** and/or **ChatGPT Usage**.
+Search for **ChatGPT Usage** and/or **Claude Usage**.
+
+> HACS metadata is included for development, but this private monorepo contains two integrations. Manual installation is the intended installation method while it remains private.
 
 ---
 
 # ChatGPT / Codex Usage
 
-## Recommended method: Remote OpenAI
+## Recommended: Remote OpenAI
 
-Use this unless you specifically want ChatGPT OAuth credentials to remain off Home Assistant.
-
-Remote architecture:
+Use Remote OpenAI unless you specifically want OpenAI OAuth credentials to remain off Home Assistant.
 
 ```text
 Home Assistant
@@ -89,36 +98,35 @@ Home Assistant
 OpenAI device-code login
       │
       ▼
-ChatGPT / Codex usage service
+ChatGPT/Codex usage service
       │
       ▼
-5-hour + weekly usage / reset data
+5-hour / weekly / additional usage windows
       │
       ▼
-chatgpt_usage_reset event
+chatgpt_usage_reset
 ```
 
-Your Windows PC does **not** need to be running.
+Your Windows PC does **not** need to be on.
 
-### Remote setup
+## Remote OpenAI setup
 
-1. Copy `custom_components/chatgpt_usage` into `/config/custom_components/chatgpt_usage`.
-2. Restart Home Assistant.
-3. Open **Settings → Devices & services → Add Integration → ChatGPT Usage**.
-4. Select **Remote OpenAI**.
-5. Home Assistant displays an OpenAI device-login URL and temporary code.
-6. Open the displayed URL on your phone/computer.
-7. Sign into the ChatGPT account that has Codex access.
-8. Enter the temporary code if OpenAI asks for it and approve access.
-9. Return to Home Assistant and tick **I completed OpenAI sign-in**.
-10. If the account exposes multiple ChatGPT workspaces, choose the one to monitor.
-11. Home Assistant validates the usage endpoint and creates the integration.
+1. Install `custom_components/chatgpt_usage` and restart Home Assistant.
+2. Open **Settings → Devices & services → Add Integration → ChatGPT Usage**.
+3. Select **Remote OpenAI**.
+4. Home Assistant displays an OpenAI device-login URL and temporary code.
+5. Open the URL on your phone or computer.
+6. Sign into the ChatGPT account that has Codex access.
+7. Enter the temporary code when requested and approve access.
+8. Return to Home Assistant and confirm that sign-in is complete.
+9. If OpenAI exposes more than one workspace, select the workspace to monitor.
+10. Home Assistant validates the usage service and creates the integration.
 
-The integration stores its own OAuth credentials in the Home Assistant config entry and refreshes them automatically.
+The integration stores its own OAuth credentials in Home Assistant config-entry storage and refreshes them automatically. Tokens are never exposed as entities, event data or diagnostics.
 
-### ChatGPT entities
+## ChatGPT entities
 
-Exact entity IDs depend on Home Assistant naming, but the integration creates entities equivalent to:
+Depending on what OpenAI returns for your account, entities include:
 
 ```text
 5 hour Usage
@@ -141,9 +149,11 @@ Credits available
 Refresh usage
 ```
 
-If OpenAI returns extra metered rate limits, additional window sensors are created dynamically.
+Additional metered limits are created dynamically rather than hard-coded to one fixed model list.
 
-### ChatGPT reset event
+If OpenAI only returns a weekly window, only the weekly entities are created. A weekly window is never guessed to be a five-hour window based on its position in the response.
+
+## ChatGPT reset event
 
 A confirmed allowance rollover fires:
 
@@ -151,7 +161,7 @@ A confirmed allowance rollover fires:
 chatgpt_usage_reset
 ```
 
-Example event payload:
+Example event data:
 
 ```json
 {
@@ -167,9 +177,9 @@ Example event payload:
 }
 ```
 
-The integration stores non-sensitive previous-window state so a Home Assistant restart does not fire a false reset notification.
+Reset state is persisted in Home Assistant storage. First startup, small rounding changes and temporary API failures do not count as resets.
 
-### ChatGPT reset notification automation
+## ChatGPT phone notification
 
 Replace `notify.mobile_app_your_phone` with your actual Home Assistant mobile notification action.
 
@@ -189,7 +199,7 @@ actions:
 mode: queued
 ```
 
-Weekly only:
+### Weekly ChatGPT reset only
 
 ```yaml
 alias: ChatGPT weekly allowance reset
@@ -209,7 +219,7 @@ actions:
 mode: queued
 ```
 
-### Polling
+## ChatGPT polling
 
 Default:
 
@@ -225,55 +235,70 @@ Available options:
 - 2 hours
 - 4 hours
 
-With hourly polling, a reset that occurs at 14:17 may be detected at the 15:00 poll. The reset sensor still shows the exact reset timestamp returned by OpenAI.
+With hourly polling, a reset at 14:17 may be detected at the 15:00 poll. The reset sensor still stores the exact timestamp returned by OpenAI/Codex.
 
 ---
 
-## ChatGPT local method: Codex on Windows
+# ChatGPT Local mode — Codex on Windows
 
-Use this mode if you want the ChatGPT OAuth credentials to stay on the Windows PC that already runs Codex.
+Local mode is for users who want **no OpenAI OAuth credentials stored in Home Assistant**.
 
-Architecture:
+The current helper uses the **official Codex app-server**. It does not open Codex's `auth.json` and does not copy, refresh or return OAuth tokens.
 
 ```text
-Codex auth.json on Windows
-        │
-        ▼
+Codex CLI on Windows
+      │
+      ▼
+codex app-server --stdio
+      │
+      ▼
+account/rateLimits/read
+      │
+      ▼
 Codex Usage Helper
-        │
-        │ authenticated LAN request
-        ▼
+      │ authenticated LAN request
+      ▼
 Home Assistant
-        │
-        ▼
-same sensors + chatgpt_usage_reset event
+      │
+      ▼
+same entities + chatgpt_usage_reset
 ```
 
-### Windows requirement
-
-Codex must be signed in using your **ChatGPT account** rather than only an OpenAI API key.
-
-The helper normally reads:
+OpenAI's current Codex app-server exposes the rate-limit snapshot through:
 
 ```text
-%USERPROFILE%\.codex\auth.json
+account/rateLimits/read
 ```
 
-If `CODEX_HOME` is set, it uses:
+The helper only forwards sanitized usage metadata from that RPC.
 
-```text
-%CODEX_HOME%\auth.json
+## Local Codex requirements
+
+On the Windows PC:
+
+```powershell
+codex --version
 ```
 
-### Install the Codex helper
+must work.
 
-Copy this repo directory to the Windows machine:
+Codex must already be signed into the ChatGPT account you want to monitor. If needed:
+
+```powershell
+codex login
+```
+
+Because Codex authentication belongs to your Windows user context, the helper runs when that user is logged in.
+
+## Install the Codex helper
+
+Copy this repository folder to the Windows PC:
 
 ```text
 local_helper_codex
 ```
 
-Open PowerShell in that folder and run:
+Open PowerShell inside it:
 
 ```powershell
 Set-ExecutionPolicy -Scope Process Bypass
@@ -286,46 +311,40 @@ Default port:
 8765
 ```
 
-The installer:
-
-- copies the helper into `%ProgramData%\CodexUsageHelper`;
-- creates a random 256-bit local API key;
-- installs a Scheduled Task called **Codex Usage Helper**;
-- starts it at Windows boot;
-- creates a Private-profile Windows Firewall rule limited to `LocalSubnet`;
-- finds likely LAN IPv4 addresses;
-- prints the host, port and API key for Home Assistant.
-
 Custom port:
 
 ```powershell
 .\install.ps1 -Port 8875
 ```
 
-Custom auth path:
+The installer:
 
-```powershell
-.\install.ps1 -AuthPath "D:\Codex\auth.json"
-```
+- copies the helper to `%ProgramData%\CodexUsageHelper`;
+- generates a random 256-bit helper API key;
+- creates the required Windows HTTP URL reservation;
+- creates a Scheduled Task named **Codex Usage Helper** under your logged-in Windows user;
+- starts the helper when that user logs in;
+- creates a Private-profile Windows Firewall rule restricted to `LocalSubnet`;
+- prints suitable LAN IPv4 addresses, the port and API key.
 
-### Add Local Codex to Home Assistant
+## Add Local Codex to Home Assistant
 
 Go to:
 
 **Settings → Devices & services → Add Integration → ChatGPT Usage → Local Codex**
 
-Enter the values printed by `install.ps1`:
+Enter:
 
 ```text
 Host:      Windows PC LAN IP
 Port:      8765
-API key:   generated key
+API key:   generated by install.ps1
 Use HTTPS: Off
 ```
 
-Give the Windows PC a DHCP reservation/static LAN address so the Home Assistant connection does not break when its IP changes.
+Give the Windows PC a DHCP reservation/static LAN IP so Home Assistant can continue reaching it.
 
-### Local helper security
+## Local Codex security
 
 The helper exposes only:
 
@@ -334,17 +353,53 @@ GET /api/v1/health
 GET /api/v1/usage
 ```
 
-It does **not** expose:
+It does not expose:
 
-- prompts or conversation history;
-- Codex project files;
+- OAuth tokens;
+- `auth.json`;
+- prompts or conversations;
+- Codex projects;
 - arbitrary filesystem reads;
-- arbitrary command execution;
-- OAuth access/refresh/id tokens.
+- arbitrary command execution.
 
-The helper can refresh Codex OAuth credentials when the access token expires. Before writing `auth.json`, it re-reads the file and will not overwrite a newer refresh token written by Codex concurrently.
+Home Assistant uses a separate random bearer key to access the helper.
 
-To remove it:
+The default helper connection is authenticated LAN HTTP, not encrypted HTTP. On a trusted home LAN this is normally sufficient. For an untrusted network, put it behind HTTPS and enable **Use HTTPS** in the integration.
+
+## Test Local Codex helper
+
+The helper API key is stored in:
+
+```text
+%ProgramData%\CodexUsageHelper\config.json
+```
+
+Health check:
+
+```powershell
+$Config = Get-Content "$env:ProgramData\CodexUsageHelper\config.json" -Raw | ConvertFrom-Json
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:$($Config.port)/api/v1/health" `
+  -Headers @{ Authorization = "Bearer $($Config.api_key)" }
+```
+
+Usage check:
+
+```powershell
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:$($Config.port)/api/v1/usage" `
+  -Headers @{ Authorization = "Bearer $($Config.api_key)" }
+```
+
+The usage response contains the official Codex app-server rate-limit result under:
+
+```text
+app_server_result
+```
+
+## Remove Local Codex helper
+
+From `local_helper_codex`:
 
 ```powershell
 .\uninstall.ps1
@@ -354,19 +409,18 @@ To remove it:
 
 # Claude Usage
 
-## Recommended method: Remote Anthropic
+## Recommended: Remote Anthropic
 
-1. Copy `custom_components/claude_usage` into `/config/custom_components/claude_usage`.
-2. Restart Home Assistant.
-3. Go to **Settings → Devices & services → Add Integration → Claude Usage**.
-4. Select **Remote Anthropic**.
-5. Open the authorization URL shown by Home Assistant.
-6. Sign into Claude and approve access.
-7. Copy the returned authorization code into Home Assistant.
+1. Install `custom_components/claude_usage` and restart Home Assistant.
+2. Go to **Settings → Devices & services → Add Integration → Claude Usage**.
+3. Select **Remote Anthropic**.
+4. Open the authorization URL shown by Home Assistant.
+5. Sign into Claude and approve access.
+6. Copy the returned authorization code into Home Assistant.
 
-The integration exposes the normal 5-hour/session and weekly allowance windows plus model-specific limits and Extra Usage where Anthropic returns them.
+The integration exposes the session/five-hour and weekly allowance windows, model-specific limits, and Extra Usage when Anthropic provides them.
 
-A reset fires:
+A confirmed reset fires:
 
 ```text
 claude_usage_reset
@@ -389,7 +443,7 @@ actions:
 mode: queued
 ```
 
-## Claude local method
+## Claude Local mode
 
 Copy:
 
@@ -404,7 +458,7 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\install.ps1
 ```
 
-Claude's helper defaults to port:
+Claude helper default port:
 
 ```text
 8766
@@ -414,129 +468,115 @@ Then choose:
 
 **Settings → Devices & services → Add Integration → Claude Usage → Local Claude Code**
 
-and enter the host, port and API key printed by its installer.
+and enter the host, port and API key printed by the installer.
 
 ---
 
 # Dashboard
 
-Example card YAML files are included in:
+Example Lovelace cards are included in:
 
 ```text
-dashboards/claude_usage.yaml
 dashboards/chatgpt_usage.yaml
+dashboards/claude_usage.yaml
+dashboards/ai_usage.yaml
 ```
 
-Home Assistant may choose slightly different entity IDs. Adjust the YAML after installation using the entity IDs created on your system.
+Home Assistant may generate slightly different entity IDs depending on your existing entity registry. Adjust the YAML after installation if needed.
 
-A useful combined dashboard contains:
+A useful combined view is:
 
-| AI | 5-hour/session | Weekly | Next reset |
+| AI | Short window | Weekly | Next reset |
 |---|---:|---:|---|
 | ChatGPT / Codex | Remaining % | Remaining % | timestamp |
 | Claude | Remaining % | Remaining % | timestamp |
 
 ---
 
-# Diagnostics and troubleshooting
+# Troubleshooting
 
-For either integration:
+## Integration does not appear
 
-**Settings → Devices & services → integration → three-dot menu → Download diagnostics**
-
-Diagnostics intentionally redact credentials.
-
-## Integration not shown after manual installation
-
-Check the folder path carefully:
+Verify:
 
 ```text
-/config/custom_components/claude_usage/manifest.json
 /config/custom_components/chatgpt_usage/manifest.json
+/config/custom_components/claude_usage/manifest.json
 ```
 
 Then perform a full Home Assistant restart.
 
-## ChatGPT Remote says authentication failed
+## ChatGPT Remote authentication fails
 
-Remove/re-authenticate the config entry and repeat the OpenAI device-code flow. Device-code login can also be disabled by a workspace administrator.
+Repeat the OpenAI device-code flow. Workspace administrators can disable device-code authentication.
 
 ## ChatGPT Local cannot connect
 
-On Windows check:
+On Windows:
 
 ```powershell
 Get-ScheduledTask -TaskName "Codex Usage Helper"
 Get-NetFirewallRule -DisplayName "Codex Usage Helper"
+codex --version
 ```
 
-Test locally using the API key from:
+Then run the health check above.
 
-```text
-%ProgramData%\CodexUsageHelper\config.json
-```
+## ChatGPT Local usage returns an error
 
-Then:
+First test Codex itself:
 
 ```powershell
-Invoke-RestMethod `
-  -Uri http://127.0.0.1:8765/api/v1/health `
-  -Headers @{ Authorization = "Bearer YOUR_KEY" }
+codex
 ```
 
-## ChatGPT Local says Codex authentication is missing
-
-Run:
+If authentication is required:
 
 ```powershell
 codex login
 ```
 
-and use ChatGPT/device-code sign-in. The local helper does not monitor API-key billing usage.
+The helper uses Codex's own authenticated app-server rather than managing credentials itself.
 
----
+## Download diagnostics
 
-# Privacy and security
+For either integration:
 
-## Remote modes
+**Settings → Devices & services → integration → three-dot menu → Download diagnostics**
 
-Remote mode stores OAuth tokens in Home Assistant's config-entry storage and sends HTTPS requests directly to Anthropic/OpenAI.
-
-Tokens are not exposed through sensors, reset events or diagnostics.
-
-## Local modes
-
-Local mode keeps the service OAuth credentials on the Windows PC. Home Assistant gets a separate randomly generated helper API key and only sanitized usage metadata.
-
-The default helper HTTP connection is LAN-only and authenticated but **not encrypted**. If the LAN is untrusted, place the helper behind an HTTPS reverse proxy and enable `Use HTTPS` in Home Assistant.
-
----
-
-# Important API limitations
-
-Claude subscription usage and ChatGPT/Codex usage are currently obtained through interfaces used by their respective first-party ecosystems, but these are not guaranteed stable third-party APIs.
-
-The provider-specific request/parsing code is isolated so upstream endpoint or schema changes can be repaired without rewriting the Home Assistant entity/reset layers.
-
-OpenAI Platform API-key billing is a different product and is **not** what the ChatGPT integration monitors.
+Credentials are redacted from diagnostics.
 
 ---
 
 # Updating
 
-Because this is a private repo/manual install:
+Because this is currently a private/manual installation:
 
-1. pull/download the latest repository;
-2. replace the relevant `/config/custom_components/...` directory;
+1. pull or download the latest repository;
+2. replace the relevant `/config/custom_components/...` folder;
 3. restart Home Assistant.
 
-Do not replace your Home Assistant `.storage` directory. Reset history is persisted there by Home Assistant automatically.
+If using a Windows helper, rerun its `install.ps1` after helper changes so the copy under `%ProgramData%` is updated.
+
+Do not replace Home Assistant's `.storage` directory. Reset history is persisted there automatically.
+
+---
+
+# Important API limitations
+
+Remote ChatGPT/Codex usage currently relies on OpenAI interfaces used by the Codex ecosystem, including an undocumented ChatGPT usage endpoint. OpenAI can change that interface without notice.
+
+Local ChatGPT/Codex mode is less coupled to that web endpoint because it uses the official open-source Codex app-server `account/rateLimits/read` RPC.
+
+Claude subscription usage similarly depends on interfaces used by the Claude ecosystem that are not guaranteed as stable third-party APIs.
+
+OpenAI Platform API-key billing is a different product and is **not** what ChatGPT Usage monitors.
 
 ---
 
 # Development
 
-Tests cover normalization, dynamic limits, reset detection and secret redaction.
+Tests cover usage normalization, dynamic limits, official Codex app-server response parsing, reset detection and secret redaction.
 
 ```bash
 python -m compileall custom_components tests
@@ -550,6 +590,6 @@ ruff check custom_components tests
 
 The Claude implementation references concepts from Patrick van Staveren's MIT-licensed `trickv/hass-claude-usage` project.
 
-The ChatGPT/Codex implementation verifies device-auth and usage protocol behaviour against OpenAI's open-source Codex client and the MIT-licensed `LucaFSmart/codex-usage` project.
+The ChatGPT/Codex implementation verifies device-auth and usage behaviour against OpenAI's open-source Codex client and the MIT-licensed `LucaFSmart/codex-usage` project.
 
 See `NOTICE.md` and `NOTICE_CHATGPT.md`.
