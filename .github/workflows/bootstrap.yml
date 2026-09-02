@@ -1,0 +1,34 @@
+name: Bootstrap repository
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - bootstrap.zip.b64
+      - .github/workflows/bootstrap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  bootstrap:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Expand validated project
+        shell: bash
+        run: |
+          set -euo pipefail
+          base64 -d bootstrap.zip.b64 > /tmp/ha-claude-usage.zip
+          rm bootstrap.zip.b64
+          unzip -oq /tmp/ha-claude-usage.zip -d .
+          rm .github/workflows/bootstrap.yml
+      - name: Commit project
+        shell: bash
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Add Claude Usage Home Assistant integration"
+          git push
