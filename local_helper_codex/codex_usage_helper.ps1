@@ -86,40 +86,29 @@ function Invoke-CodexRateLimits {
 
         $proc.StandardInput.WriteLine('{"method":"initialized","params":{}}')
         $proc.StandardInput.WriteLine('{"id":2,"method":"account/rateLimits/read","params":{}}')
-        $proc.StandardInput.WriteLine('{"id":3,"method":"account/read","params":{"refreshToken":false}}')
         $proc.StandardInput.Flush()
 
         $rateLimits = $null
-        $account = $null
         $deadline = [DateTime]::UtcNow.AddSeconds(20)
-        while ([DateTime]::UtcNow -lt $deadline -and ($null -eq $rateLimits -or $null -eq $account)) {
+        while ([DateTime]::UtcNow -lt $deadline -and $null -eq $rateLimits) {
             $line = Read-CodexRpcLine -Process $proc -Deadline $deadline
             if ($null -eq $line) { break }
             try { $obj = $line | ConvertFrom-Json } catch { continue }
             if ($obj.id -eq 2) {
                 if ($null -ne $obj.error) { throw "Codex rate-limit RPC failed: $($obj.error.message)" }
                 $rateLimits = $obj.result
-            } elseif ($obj.id -eq 3) {
-                if ($null -ne $obj.error) { throw "Codex account RPC failed: $($obj.error.message)" }
-                $account = $obj.result
             }
         }
         if ($null -eq $rateLimits) { throw 'Codex app-server returned no rate-limit result.' }
 
         $plan = $null
-        $accountType = $null
-        if ($null -ne $account -and $null -ne $account.account) {
-            $accountType = [string]$account.account.type
-            if ($account.account.planType) { $plan = [string]$account.account.planType }
-        }
-        if ($accountType -and $accountType -ne 'chatgpt') {
-            throw "Codex is authenticated as '$accountType', not with a ChatGPT subscription. Run codex login and choose ChatGPT sign-in."
+        if ($null -ne $rateLimits.rateLimits -and $rateLimits.rateLimits.planType) {
+            $plan = [string]$rateLimits.rateLimits.planType
         }
 
         return [pscustomobject]@{
             RateLimits = $rateLimits
             Plan = $plan
-            AccountType = $accountType
         }
     }
     finally {
