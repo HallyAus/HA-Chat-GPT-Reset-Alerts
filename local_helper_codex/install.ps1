@@ -14,8 +14,18 @@ if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administra
     exit
 }
 
-$codex = Get-Command codex -ErrorAction SilentlyContinue
-if (-not $codex) { throw "Codex CLI was not found in PATH. Install Codex and run 'codex login' first." }
+# Prefer native/executable launchers. npm installs Codex as codex.cmd on Windows.
+$codex = Get-Command codex.cmd -ErrorAction SilentlyContinue
+if (-not $codex) { $codex = Get-Command codex.exe -ErrorAction SilentlyContinue }
+if (-not $codex) { $codex = Get-Command codex -ErrorAction SilentlyContinue }
+if (-not $codex -or -not $codex.Source) {
+    throw "Codex CLI was not found in PATH. Install Codex and run 'codex login' first."
+}
+$codexPath = [IO.Path]::GetFullPath([string]$codex.Source)
+if ($codexPath -match '\.ps1$') {
+    $cmdSibling = [IO.Path]::ChangeExtension($codexPath, '.cmd')
+    if (Test-Path -LiteralPath $cmdSibling) { $codexPath = $cmdSibling }
+}
 
 $TaskName = 'Codex Usage Helper'
 $FirewallName = 'Codex Usage Helper'
@@ -37,6 +47,7 @@ $helperId = [Guid]::NewGuid().ToString('D')
     helper_id = $helperId
     port = $Port
     api_key = $apiKey
+    codex_path = $codexPath
 } | ConvertTo-Json | Set-Content -LiteralPath $ConfigPath -Encoding UTF8
 
 $currentUser = "$env:USERDOMAIN\$env:USERNAME"
@@ -79,7 +90,9 @@ $addresses = @(Get-NetIPAddress -AddressFamily IPv4 -AddressState Preferred -Err
 
 Write-Host ''
 Write-Host 'Codex Usage Helper installed.' -ForegroundColor Green
-Write-Host "Service:      $(if ($healthOk) { 'Running' } else { 'Installed - health check did not respond yet' })"
+Write-Host "Helper:       $(if ($healthOk) { 'Running' } else { 'Installed - health check did not respond yet' })"
+Write-Host "Windows user: $currentUser"
+Write-Host "Codex:        $codexPath"
 Write-Host "Port:         $Port"
 Write-Host "API key:      $apiKey"
 Write-Host 'Source:       codex app-server account/rateLimits/read'
