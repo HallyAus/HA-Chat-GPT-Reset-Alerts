@@ -1,0 +1,34 @@
+type: vertical-stack
+cards:
+  - type: entities
+    title: ChatGPT / Codex Usage
+    show_header_toggle: false
+    entities:
+      - entity: sensor.chatgpt_usage_5_hour_remaining
+        name: 5 hour remaining
+      - entity: sensor.chatgpt_usage_5_hour_reset
+        name: 5 hour reset
+      - entity: sensor.chatgpt_usage_weekly_remaining
+        name: Weekly remaining
+      - entity: sensor.chatgpt_usage_weekly_reset
+        name: Weekly reset
+      - entity: binary_sensor.chatgpt_usage_connected
+        name: Connected
+
+  - type: entities
+    title: Claude Usage
+    show_header_toggle: false
+    entities:
+      - entity: sensor.claude_usage_5_hour_remaining
+        name: Session remaining
+      - entity: sensor.claude_usage_5_hour_reset
+        name: Session reset
+      - entity: sensor.claude_usage_weekly_remaining
+        name: Weekly remaining
+      - entity: sensor.claude_usage_weekly_reset
+        name: Weekly reset
+      - entity: binary_sensor.claude_usage_connected
+        name: Connected
+
+# Home Assistant may create different entity IDs depending on the existing
+# entity registry. Replace the IDs above with the entities created on your system.
