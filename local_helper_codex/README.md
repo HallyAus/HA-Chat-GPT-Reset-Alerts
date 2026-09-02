@@ -4,21 +4,13 @@ This optional helper lets the `ChatGPT Usage` Home Assistant integration read yo
 
 ## How it works
 
-The helper does **not** read or copy Codex OAuth credentials. It launches the official local Codex app-server and requests the read-only RPC:
+The helper does **not** read or copy Codex OAuth credentials. It launches the official local Codex app-server and requests only the read-only RPC:
 
 ```text
 account/rateLimits/read
 ```
 
-It also calls:
-
-```text
-account/read
-```
-
-only to confirm the local Codex account type and obtain the plan name when available.
-
-Home Assistant receives only sanitized account/rate-limit metadata returned by Codex app-server.
+Home Assistant receives only the rate-limit snapshot returned by Codex app-server. The plan name is taken from that same snapshot when available.
 
 ## Security model
 
@@ -28,6 +20,7 @@ Home Assistant receives only sanitized account/rate-limit metadata returned by C
 - No arbitrary command or filesystem endpoint is exposed.
 - The helper never returns OAuth tokens, prompts, conversations, projects or files.
 - The helper never opens `%USERPROFILE%\.codex\auth.json`.
+- The helper does not refresh, rotate, copy or persist OpenAI/Codex OAuth credentials.
 
 ## Requirements
 
@@ -101,7 +94,7 @@ GET /api/v1/health
 GET /api/v1/usage
 ```
 
-The usage response carries the `account/rateLimits/read` result under `app_server_result`.
+The usage response carries the official `account/rateLimits/read` result under `app_server_result`.
 
 ## Uninstall
 
