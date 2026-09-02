@@ -50,23 +50,33 @@ function Read-CodexRpcLine {
     return $task.Result
 }
 
-function Invoke-CodexRateLimits {
-    $codex = Get-Command codex -ErrorAction SilentlyContinue
-    if (-not $codex) { throw 'Codex CLI was not found in PATH.' }
+function Start-CodexAppServer {
+    param([string]$CodexPath)
+    if (-not (Test-Path -LiteralPath $CodexPath)) {
+        throw "Codex launcher was not found at $CodexPath. Re-run install.ps1."
+    }
 
+    # npm installs Codex as codex.cmd on Windows. Launch through cmd.exe so both
+    # codex.cmd and native codex.exe support redirected JSONL stdin/stdout.
+    $escaped = $CodexPath.Replace('"', '""')
     $psi = New-Object Diagnostics.ProcessStartInfo
-    $psi.FileName = $codex.Source
-    $psi.Arguments = 'app-server --stdio'
+    $psi.FileName = if ($env:ComSpec) { $env:ComSpec } else { 'cmd.exe' }
+    $psi.Arguments = '/d /s /c ""' + $escaped + '" app-server --stdio"'
     $psi.UseShellExecute = $false
     $psi.RedirectStandardInput = $true
     $psi.RedirectStandardOutput = $true
-    $psi.RedirectStandardError = $true
+    $psi.RedirectStandardError = $false
     $psi.CreateNoWindow = $true
 
     $proc = New-Object Diagnostics.Process
     $proc.StartInfo = $psi
     if (-not $proc.Start()) { throw 'Unable to start Codex app-server.' }
+    return $proc
+}
 
+function Invoke-CodexRateLimits {
+    param([string]$CodexPath)
+    $proc = Start-CodexAppServer -CodexPath $CodexPath
     try {
         $proc.StandardInput.WriteLine('{"id":1,"method":"initialize","params":{"clientInfo":{"name":"ha_ai_usage","title":"Home Assistant AI Usage","version":"0.1.0"}}}')
         $proc.StandardInput.Flush()
@@ -85,31 +95,21 @@ function Invoke-CodexRateLimits {
         if (-not $initialized) { throw 'Codex app-server initialization timed out.' }
 
         $proc.StandardInput.WriteLine('{"method":"initialized","params":{}}')
-        $proc.StandardInput.WriteLine('{"id":2,"method":"account/rateLimits/read","params":{}}')
+        $proc.StandardInput.WriteLine('{"id":2,"method":"account/rateLimits/read"}')
         $proc.StandardInput.Flush()
 
-        $rateLimits = $null
         $deadline = [DateTime]::UtcNow.AddSeconds(20)
-        while ([DateTime]::UtcNow -lt $deadline -and $null -eq $rateLimits) {
+        while ([DateTime]::UtcNow -lt $deadline) {
             $line = Read-CodexRpcLine -Process $proc -Deadline $deadline
             if ($null -eq $line) { break }
             try { $obj = $line | ConvertFrom-Json } catch { continue }
             if ($obj.id -eq 2) {
                 if ($null -ne $obj.error) { throw "Codex rate-limit RPC failed: $($obj.error.message)" }
-                $rateLimits = $obj.result
+                if ($null -eq $obj.result) { throw 'Codex app-server returned no rate-limit result.' }
+                return $obj.result
             }
         }
-        if ($null -eq $rateLimits) { throw 'Codex app-server returned no rate-limit result.' }
-
-        $plan = $null
-        if ($null -ne $rateLimits.rateLimits -and $rateLimits.rateLimits.planType) {
-            $plan = [string]$rateLimits.rateLimits.planType
-        }
-
-        return [pscustomobject]@{
-            RateLimits = $rateLimits
-            Plan = $plan
-        }
+        throw 'Codex app-server rate-limit request timed out.'
     }
     finally {
         try { $proc.StandardInput.Close() } catch { }
@@ -122,11 +122,12 @@ if (-not (Test-Path -LiteralPath $ConfigPath)) { throw "Configuration file not f
 $config = Get-Content -LiteralPath $ConfigPath -Raw -Encoding UTF8 | ConvertFrom-Json
 $port = [int]$config.port
 $apiKey = [string]$config.api_key
+$codexPath = [Environment]::ExpandEnvironmentVariables([string]$config.codex_path)
 
 $listener = New-Object Net.HttpListener
 $listener.Prefixes.Add("http://+:$port/")
 $listener.Start()
-Write-HelperLog "Codex Usage Helper started on port $port using codex app-server."
+Write-HelperLog "Codex Usage Helper started on port $port using account/rateLimits/read."
 
 try {
     while ($listener.IsListening) {
@@ -145,12 +146,11 @@ try {
 
             $path = $context.Request.Url.AbsolutePath.TrimEnd('/')
             if ($path -eq '/api/v1/health') {
-                $codex = Get-Command codex -ErrorAction SilentlyContinue
                 Send-Json $context 200 ([ordered]@{
                     status = 'ok'
                     api_version = $ApiVersion
                     helper_id = $config.helper_id
-                    codex_detected = ($null -ne $codex)
+                    codex_detected = [bool](Test-Path -LiteralPath $codexPath)
                     source = 'codex_app_server'
                 })
                 continue
@@ -158,15 +158,20 @@ try {
 
             if ($path -eq '/api/v1/usage') {
                 try {
-                    $result = Invoke-CodexRateLimits
+                    $rateLimits = Invoke-CodexRateLimits -CodexPath $codexPath
+                    $plan = $null
+                    if ($null -ne $rateLimits.rateLimits -and $rateLimits.rateLimits.planType) {
+                        $plan = [string]$rateLimits.rateLimits.planType
+                    }
                     Send-Json $context 200 ([ordered]@{
                         status = 'ok'
                         api_version = $ApiVersion
                         source = 'codex_app_server'
                         helper_id = $config.helper_id
                         timestamp = [DateTimeOffset]::UtcNow.ToString('o')
-                        plan = $result.Plan
-                        app_server_result = $result.RateLimits
+                        account_id = $rateLimits.accountId
+                        plan = $plan
+                        app_server_result = $rateLimits
                     })
                 } catch {
                     $message = $_.Exception.Message
