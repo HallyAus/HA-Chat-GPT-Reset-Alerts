@@ -1,0 +1,17 @@
+title: Claude Usage
+views:
+  - title: Usage
+    path: usage
+    cards:
+      - type: entities
+        title: Claude Usage
+        entities:
+          - entity: sensor.claude_usage_5_hour_usage
+          - entity: sensor.claude_usage_5_hour_remaining
+          - entity: sensor.claude_usage_5_hour_reset
+          - entity: sensor.claude_usage_weekly_usage
+          - entity: sensor.claude_usage_weekly_remaining
+          - entity: sensor.claude_usage_weekly_reset
+          - entity: binary_sensor.claude_usage_limit_reached
+          - entity: sensor.claude_usage_last_update
+          - entity: binary_sensor.claude_usage_connected

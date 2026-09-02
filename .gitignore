@@ -1,0 +1,11 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+*.log
+local_helper/config.json

@@ -1,0 +1,73 @@
+{
+  "title": "Claude Usage",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose connection method",
+        "description": "Remote Anthropic works without your PC. Local Claude Code reads usage through the Windows helper.",
+        "data": {
+          "provider": "Connection method"
+        }
+      },
+      "remote": {
+        "title": "Connect Anthropic account",
+        "description": "Open this URL, approve access, then paste the returned authorization code below:\n\n{url}",
+        "data": {
+          "auth_code": "Authorization code"
+        }
+      },
+      "local": {
+        "title": "Connect local Claude Code helper",
+        "description": "Enter the details printed by local_helper/install.ps1.",
+        "data": {
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "use_https": "Use HTTPS"
+        }
+      },
+      "reauth_remote": {
+        "title": "Reconnect Anthropic account",
+        "description": "Open this URL, approve access, then paste the returned authorization code:\n\n{url}",
+        "data": {
+          "auth_code": "Authorization code"
+        }
+      },
+      "reauth_local": {
+        "title": "Update local helper API key",
+        "data": {
+          "api_key": "API key"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect or validate the usage service.",
+      "invalid_auth": "Authentication was rejected.",
+      "missing_code": "Enter the authorization code.",
+      "exchange_failed": "Anthropic did not accept the authorization code.",
+      "state_mismatch": "OAuth state verification failed. Restart setup and try again."
+    },
+    "abort": {
+      "already_configured": "This Claude usage source is already configured.",
+      "reauth_successful": "Authentication updated successfully."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Claude Usage options",
+        "data": {
+          "update_interval": "Polling interval (seconds)",
+          "host": "Host",
+          "port": "Port",
+          "api_key": "API key",
+          "use_https": "Use HTTPS"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Unable to connect to the local helper.",
+      "invalid_auth": "The local helper rejected the API key."
+    }
+  }
+}
