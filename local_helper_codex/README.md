@@ -1,26 +1,52 @@
 # Codex Usage Helper for Windows
 
-This optional helper lets the `ChatGPT Usage` Home Assistant integration read your ChatGPT/Codex subscription allowance from a Windows PC where the official Codex CLI/app is already authenticated.
+This optional helper lets the `ChatGPT Usage` Home Assistant integration read your ChatGPT/Codex subscription allowance from a Windows PC where the official Codex CLI is already authenticated.
+
+## How it works
+
+The helper does **not** read or copy Codex OAuth credentials. It launches the official local Codex app-server and requests the read-only RPC:
+
+```text
+account/rateLimits/read
+```
+
+It also calls:
+
+```text
+account/read
+```
+
+only to confirm the local Codex account type and obtain the plan name when available.
+
+Home Assistant receives only sanitized account/rate-limit metadata returned by Codex app-server.
 
 ## Security model
 
 - Home Assistant authenticates to the helper with a separately generated 256-bit bearer key.
 - The Windows firewall rule allows only `LocalSubnet` on the selected port.
 - Only `GET /api/v1/health` and `GET /api/v1/usage` exist.
-- The helper returns only sanitized usage metadata. It never returns OAuth tokens, prompts, conversations, projects or files.
-- The helper can refresh the existing Codex OAuth token when needed. Before writing `auth.json`, it re-reads the file and refuses to overwrite a refresh token that Codex changed concurrently.
+- No arbitrary command or filesystem endpoint is exposed.
+- The helper never returns OAuth tokens, prompts, conversations, projects or files.
+- The helper never opens `%USERPROFILE%\.codex\auth.json`.
 
-## Requirement
+## Requirements
 
-Codex must be signed in with your **ChatGPT account**, not an OpenAI API key.
+- Windows PC with Codex CLI installed.
+- `codex` available in PATH.
+- Codex signed in with the ChatGPT account whose allowance you want to monitor.
+- The Windows user must be logged in while Local mode is running, because Codex authentication belongs to that user context.
 
-The default credential path is:
+Verify before installing:
 
-```text
-%USERPROFILE%\.codex\auth.json
+```powershell
+codex --version
 ```
 
-If `CODEX_HOME` is defined, the installer uses `%CODEX_HOME%\auth.json` instead.
+If needed, sign in:
+
+```powershell
+codex login
+```
 
 ## Install
 
@@ -31,24 +57,51 @@ Set-ExecutionPolicy -Scope Process Bypass
 .\install.ps1
 ```
 
-Default port: `8765`.
+The installer requests Administrator permission to create the HTTP URL reservation, firewall rule and scheduled task.
 
-Custom port or auth path:
+Default port:
+
+```text
+8765
+```
+
+Custom port:
 
 ```powershell
 .\install.ps1 -Port 8875
-.\install.ps1 -AuthPath "D:\Codex\auth.json"
 ```
 
-The installer prints the host candidates, port and generated API key to enter in Home Assistant.
+The installer creates a Scheduled Task named **Codex Usage Helper** that runs when your Windows user logs in. It prints the host candidates, port and generated API key to enter in Home Assistant.
 
 ## Home Assistant
 
 Choose:
 
 ```text
-Settings → Devices & services → Add integration → ChatGPT Usage → Local Codex
+Settings → Devices & services → Add Integration → ChatGPT Usage → Local Codex
 ```
+
+Enter:
+
+```text
+Host:      Windows PC LAN IP
+Port:      8765
+API key:   key printed by install.ps1
+Use HTTPS: Off
+```
+
+Give the Windows PC a DHCP reservation/static LAN address so Home Assistant keeps reaching the same IP.
+
+## API
+
+Authenticated endpoints:
+
+```text
+GET /api/v1/health
+GET /api/v1/usage
+```
+
+The usage response carries the `account/rateLimits/read` result under `app_server_result`.
 
 ## Uninstall
 
