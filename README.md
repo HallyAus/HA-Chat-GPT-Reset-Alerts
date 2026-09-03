@@ -31,7 +31,7 @@ This repository is currently public, but it contains **two separate Home Assista
 Clone or download:
 
 ```text
-https://github.com/HallyAus/HA_Ai_Usage
+https://github.com/HallyAus/HA-Chat-GPT-Reset-Alerts
 ```
 
 For ChatGPT/Codex copy:
