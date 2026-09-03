@@ -3,10 +3,10 @@
   "name": "ChatGPT Usage",
   "codeowners": ["@HallyAus"],
   "config_flow": true,
-  "documentation": "https://github.com/HallyAus/HA_Ai_Usage",
+  "documentation": "https://github.com/HallyAus/HA-Chat-GPT-Reset-Alerts",
   "integration_type": "service",
   "iot_class": "cloud_polling",
-  "issue_tracker": "https://github.com/HallyAus/HA_Ai_Usage/issues",
+  "issue_tracker": "https://github.com/HallyAus/HA-Chat-GPT-Reset-Alerts/issues",
   "requirements": [],
-  "version": "0.1.0"
+  "version": "0.1.1"
 }
