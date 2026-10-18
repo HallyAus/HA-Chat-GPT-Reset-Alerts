@@ -1,0 +1,86 @@
+name: Personal combined AI usage validation
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: personal-ubuntu
+    container:
+      image: python:3.13-bookworm@sha256:073ffebb96ae4d0ed73ccad59f08c47bd84af8a79f5258130f8458ac50ad9ff4
+    timeout-minutes: 30
+    steps:
+      - name: Check out the exact private VM300 source
+        env:
+          SOURCE_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$GITHUB_SERVER_URL" = 'http://192.168.1.130:3000'
+          test "$GITHUB_REPOSITORY" = 'hallyaus/HA-Chat-GPT-Reset-Alerts'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "${SOURCE_TOKEN:?Repository job token required}"
+          [[ "$GITHUB_SHA" =~ ^[0-9a-f]{40}$ ]]
+          helper="$(mktemp "${RUNNER_TEMP:-/tmp}/ai-usage-askpass.XXXXXX")"
+          trap 'rm -f "$helper"' EXIT
+          cat > "$helper" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *Password*) printf '%s\n' "$SOURCE_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$helper"
+          export GIT_ASKPASS="$helper" GIT_TERMINAL_PROMPT=0
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -c credential.helper= fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Original lint and pure parsing, reset and privacy tests
+        shell: bash
+        run: bash .gitea/scripts/verify.sh
+  hassfest:
+    needs: [verify]
+    runs-on: personal-ubuntu
+    container:
+      image: ghcr.io/home-assistant/hassfest@sha256:2dce3c5423a600e7965e5a3d5a95e0707e8452fb001ab2b5d0602099bbecba92
+    timeout-minutes: 20
+    steps:
+      - name: Check out the exact private VM300 source
+        env:
+          SOURCE_TOKEN: ${{ secrets.GITEA_TOKEN }}
+        shell: sh
+        run: |
+          set -eu
+          test "$GITHUB_SERVER_URL" = 'http://192.168.1.130:3000'
+          test "$GITHUB_REPOSITORY" = 'hallyaus/HA-Chat-GPT-Reset-Alerts'
+          test "$GITHUB_REF" = 'refs/heads/main'
+          test -n "${SOURCE_TOKEN:?Repository job token required}"
+          case "$GITHUB_SHA" in ''|*[!0-9a-f]*) exit 1;; esac
+          test "${#GITHUB_SHA}" -eq 40
+          command -v git >/dev/null || apk add --no-cache git
+          helper="$(mktemp "${RUNNER_TEMP:-/tmp}/ai-usage-askpass.XXXXXX")"
+          trap 'rm -f "$helper"' EXIT
+          cat > "$helper" <<'ASKPASS'
+          #!/bin/sh
+          case "$1" in
+            *Username*) printf '%s\n' 'x-access-token' ;;
+            *Password*) printf '%s\n' "$SOURCE_TOKEN" ;;
+            *) exit 1 ;;
+          esac
+          ASKPASS
+          chmod 700 "$helper"
+          export GIT_ASKPASS="$helper" GIT_TERMINAL_PROMPT=0
+          git init .
+          git remote add origin "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY.git"
+          git -c credential.helper= fetch --no-tags --depth=1 origin "$GITHUB_SHA"
+          git checkout --detach FETCH_HEAD
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+      - name: Original official Home Assistant metadata validation
+        shell: sh
+        run: |
+          set -eu
+          test -f /usr/src/homeassistant/script/hassfest/docker/entrypoint.sh
+          /usr/src/homeassistant/script/hassfest/docker/entrypoint.sh
