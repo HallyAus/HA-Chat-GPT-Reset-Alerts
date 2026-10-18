@@ -13,5 +13,7 @@ as validation. Preserve hourly polling, persisted reset state and redaction.
 The combined two-integration repository deliberately has no HACS validation.
 Preserve its documented manual installation route; do not split/publish it or
 change visibility just to obtain a HACS result. The original Sunday00UTC
-schedule is deferred until a complete Gitea pass and inert recovery proof.
+schedule is enrolled after full Gitea run486 and independent inert recovery
+proof passed. Its configuration commit must retain the identical full jobs;
+verify registration separately and do not claim a scheduled firing in advance.
 Keep M4T, Kidde and Proxmox.99 outside this work.
