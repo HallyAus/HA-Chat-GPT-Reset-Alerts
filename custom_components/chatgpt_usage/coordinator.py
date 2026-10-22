@@ -120,7 +120,11 @@ class ChatGPTUsageCoordinator(DataUpdateCoordinator[ChatGPTUsageData]):
             last_event_key = previous.last_event_key
             if detection is not None:
                 last_event_key = detection.event_key
-                event = _reset_event_data(previous, window, detection.confidence)
+                event = {
+                    **_reset_event_data(previous, window, detection.confidence),
+                    "entry_id": self.entry.entry_id,
+                    "entry_title": self.entry.title,
+                }
                 self.hass.bus.async_fire(EVENT_USAGE_RESET, event)
                 _LOGGER.info(
                     "Detected ChatGPT/Codex usage reset for %s (%s)",
